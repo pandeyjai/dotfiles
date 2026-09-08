@@ -1,5 +1,5 @@
-# Nuke systemd-networkd - conflicts with NetworkManager on wlo1 (rtw88_8723de)
-# This bitch fought NM for DHCP/sysctl every 20s - mask existence
+# Disable systemd-networkd - conflicts with NetworkManager on wlo1 (rtw88_8723de)
+# Prevents DHCP/sysctl race every 20s - ensure NetworkManager alone manages wlo1
 disable systemd-networkd.service
 disable systemd-networkd.socket
 disable systemd-networkd-varlink.socket

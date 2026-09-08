@@ -77,7 +77,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable getty@tty1.service 2>/dev/null || true
 
-# --- Network stability fix: NUKE systemd-networkd which conflicts with NetworkManager (caused 20s cycle on wlo1/rtw88_8723de) - fuck that bitch ---
+# --- Network stability fix: NUKE systemd-networkd which conflicts with NetworkManager (caused 20s cycle on wlo1/rtw88_8723de) ---
 echo "==> NUKING systemd-networkd (mask existence, delete configs)"
 sudo systemctl disable --now systemd-networkd systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket systemd-networkd-wait-online.service systemd-network-generator.service 2>/dev/null || true
 sudo systemctl mask systemd-networkd systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket systemd-networkd-wait-online.service systemd-network-generator.service 2>/dev/null || true
