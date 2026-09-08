@@ -76,6 +76,22 @@ ExecStart=-/usr/bin/agetty --autologin $USER --noclear %I \$TERM
 EOF
 sudo systemctl daemon-reload
 sudo systemctl enable getty@tty1.service 2>/dev/null || true
+
+# --- Network stability fix: disable systemd-networkd which conflicts with NetworkManager (caused 20s disconnect cycle on wlo1/rtw88_8723de) ---
+echo "==> fixing network (disable systemd-networkd, install NetworkManager + modprobe configs)"
+sudo systemctl disable --now systemd-networkd 2>/dev/null || true
+sudo systemctl mask systemd-networkd 2>/dev/null || true
+sudo systemctl disable --now systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket 2>/dev/null || true
+sudo systemctl mask systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket 2>/dev/null || true
+if ls /etc/systemd/network/20-*.network >/dev/null 2>&1; then sudo mkdir -p /etc/systemd/network/backup; sudo mv /etc/systemd/network/20-*.network /etc/systemd/network/backup/ 2>/dev/null || true; fi
+sudo mkdir -p /etc/NetworkManager/conf.d
+sudo cp "$RICE/networkmanager/conf.d/wifi-powersave.conf" /etc/NetworkManager/conf.d/wifi-powersave.conf
+sudo cp "$RICE/networkmanager/conf.d/wifi-rand-mac.conf" /etc/NetworkManager/conf.d/wifi-rand-mac.conf
+sudo cp "$RICE/networkmanager/conf.d/dns-resolved.conf" /etc/NetworkManager/conf.d/dns-resolved.conf
+sudo mkdir -p /etc/modprobe.d
+sudo cp "$RICE/modprobe.d/rtw88_8723de.conf" /etc/modprobe.d/rtw88_8723de.conf 2>/dev/null || true
+sudo systemctl daemon-reload
+
 sudo systemctl enable --now NetworkManager 2>/dev/null || true
 sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
 sudo timedatectl set-timezone Asia/Kolkata 2>/dev/null || sudo ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime 2>/dev/null || true
