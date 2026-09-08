@@ -77,13 +77,17 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable getty@tty1.service 2>/dev/null || true
 
-# --- Network stability fix: disable systemd-networkd which conflicts with NetworkManager (caused 20s disconnect cycle on wlo1/rtw88_8723de) ---
-echo "==> fixing network (disable systemd-networkd, install NetworkManager + modprobe configs)"
-sudo systemctl disable --now systemd-networkd 2>/dev/null || true
-sudo systemctl mask systemd-networkd 2>/dev/null || true
-sudo systemctl disable --now systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket 2>/dev/null || true
-sudo systemctl mask systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket 2>/dev/null || true
-if ls /etc/systemd/network/20-*.network >/dev/null 2>&1; then sudo mkdir -p /etc/systemd/network/backup; sudo mv /etc/systemd/network/20-*.network /etc/systemd/network/backup/ 2>/dev/null || true; fi
+# --- Network stability fix: NUKE systemd-networkd which conflicts with NetworkManager (caused 20s cycle on wlo1/rtw88_8723de) - fuck that bitch ---
+echo "==> NUKING systemd-networkd (mask existence, delete configs)"
+sudo systemctl disable --now systemd-networkd systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket systemd-networkd-wait-online.service systemd-network-generator.service 2>/dev/null || true
+sudo systemctl mask systemd-networkd systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-varlink-metrics.socket systemd-networkd-resolve-hook.socket systemd-networkd-wait-online.service systemd-network-generator.service 2>/dev/null || true
+# delete all networkd configs that make it claim wlo1 (Type=wlan) - move to backup so existence gone
+if ls /etc/systemd/network/*.network >/dev/null 2>&1; then sudo mkdir -p /etc/systemd/network/backup; sudo mv /etc/systemd/network/*.network /etc/systemd/network/backup/ 2>/dev/null || true; fi
+# preset override so pacman preset never re-enables it after update
+sudo mkdir -p /etc/systemd/system-preset
+sudo cp "$RICE/systemd/system-preset/00-disable-networkd.preset" /etc/systemd/system-preset/00-disable-networkd.preset
+# also block via /etc/systemd/network empty keep file
+sudo mkdir -p /etc/systemd/network; sudo touch /etc/systemd/network/.keep 2>/dev/null || true
 sudo mkdir -p /etc/NetworkManager/conf.d
 sudo cp "$RICE/networkmanager/conf.d/wifi-powersave.conf" /etc/NetworkManager/conf.d/wifi-powersave.conf
 sudo cp "$RICE/networkmanager/conf.d/wifi-rand-mac.conf" /etc/NetworkManager/conf.d/wifi-rand-mac.conf
@@ -91,6 +95,8 @@ sudo cp "$RICE/networkmanager/conf.d/dns-resolved.conf" /etc/NetworkManager/conf
 sudo mkdir -p /etc/modprobe.d
 sudo cp "$RICE/modprobe.d/rtw88_8723de.conf" /etc/modprobe.d/rtw88_8723de.conf 2>/dev/null || true
 sudo systemctl daemon-reload
+# verify nuke
+systemctl is-enabled systemd-networkd 2>&1 | grep -q "masked" && echo "networkd NUKED (masked)" || echo "networkd still enabled - check"
 
 # --- Lid switch fix: keep network + external monitor on when lid closed (HDMI docked) ---
 echo "==> fixing lid switch (prevent suspend killing wlo1 with external monitor)"
