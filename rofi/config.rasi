@@ -1,0 +1,21 @@
+configuration {
+  drun-display-format: "{name}";
+  drun-match-fields: "name";
+  display-drun: "Apps";
+  font: "JetBrainsMono Nerd Font 11";
+}
+window {
+  width: 50%;
+  height: 38%;
+  anchor: north;
+  location: center;
+  y-offset: 80px;
+}
+listview {
+  lines: 8;
+  fixed-height: true;
+  scrollbar: false;
+}
+entry {
+  placeholder: "";
+}

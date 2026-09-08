@@ -1,42 +1,82 @@
 #!/bin/bash
-# zJairO-style i3 + polybar rice - one-shot installer (fresh Arch Minimal -> desktop)
-# Maintainer: Prashant Pandey
-# Upstream: https://github.com/zJairO/dotfiles
-# Usage: git clone https://github.com/pandey-ps/dotfiles.git ~/dotfiles && ~/dotfiles/install.sh
 set -e
 RICE="$(cd "$(dirname "$0")" && pwd)"
+PACMAN_PKGS="xorg xorg-xinit xorg-xauth i3-wm polybar rofi feh picom dex xss-lock i3lock-color network-manager-applet networkmanager kitty nautilus gvfs libpulse git base-devel python psmisc ttf-jetbrains-mono ttf-jetbrains-mono-nerd ttf-font-awesome noto-fonts autorandr arandr xorg-xrandr libnotify dunst adw-gtk-theme gnome-themes-extra power-profiles-daemon upower fastfetch xsettingsd brightnessctl"
+AUR_PKGS="betterlockscreen"
 
-PACMAN_PKGS="xorg xorg-xinit xorg-xauth xterm i3-wm polybar rofi feh xcompmgr dex xss-lock i3lock network-manager-applet networkmanager mate-terminal caja libpulse maim git base-devel wget python psmisc ttf-jetbrains-mono ttf-jetbrains-mono-nerd ttf-font-awesome noto-fonts"
-AUR_PKGS="spotify polybar-spotify"
-
-echo "==> removing old-rice lockers (conflict with i3lock)"
-sudo pacman -Rns --noconfirm i3lock-color betterlockscreen 2>/dev/null || true
-
-echo "==> installing pacman packages"
+echo "==> installing packages"
 sudo pacman -Syu --needed --noconfirm $PACMAN_PKGS
 
 if ! command -v yay >/dev/null; then
-  echo "==> installing yay"
   git clone https://aur.archlinux.org/yay.git /tmp/yay
   (cd /tmp/yay && makepkg -si --noconfirm)
   rm -rf /tmp/yay
 fi
-echo "==> installing AUR packages (spotify now-playing)"
-yay -S --needed --noconfirm $AUR_PKGS || echo "!! AUR step failed, continuing without spotify module"
+if [ -n "${AUR_PKGS:-}" ]; then yay -S --needed --noconfirm $AUR_PKGS 2>/dev/null || true; fi
 
-echo "==> installing configs (backups kept as *.bak)"
-mkdir -p ~/.config/i3 ~/.config/polybar ~/Pictures/Wallpapers ~/Pictures/Screenshots
+echo "==> installing configs"
+mkdir -p ~/.config/i3 ~/.config/polybar ~/Pictures/Wallpapers ~/Pictures/Screenshots ~/.local/bin ~/.config/rofi
 [ -f ~/.config/i3/config ] && cp ~/.config/i3/config ~/.config/i3/config.bak
 [ -f ~/.config/polybar/config ] && cp ~/.config/polybar/config ~/.config/polybar/config.bak
+[ -f ~/.config/rofi/config.rasi ] && cp ~/.config/rofi/config.rasi ~/.config/rofi/config.rasi.bak
 cp "$RICE/i3/config" ~/.config/i3/config
 cp "$RICE/polybar/config" ~/.config/polybar/config
+cp "$RICE/polybar/launch.sh" ~/.config/polybar/launch.sh; chmod +x ~/.config/polybar/launch.sh
+cp "$RICE/picom/picom.conf" ~/.config/picom/picom.conf
+cp "$RICE/scripts/display-menu.sh" ~/.local/bin/display-menu; chmod +x ~/.local/bin/display-menu
+cp "$RICE/scripts/audio-menu.sh" ~/.local/bin/audio-menu; chmod +x ~/.local/bin/audio-menu
+cp "$RICE/scripts/pkg-menu.sh" ~/.local/bin/pkg-menu; chmod +x ~/.local/bin/pkg-menu
+cp "$RICE/scripts/idle-toggle.sh" ~/.local/bin/idle-toggle.sh; chmod +x ~/.local/bin/idle-toggle.sh
+cp "$RICE/scripts/workspaces.sh" ~/.local/bin/workspaces.sh; chmod +x ~/.local/bin/workspaces.sh
+cp "$RICE/scripts/power-menu.sh" ~/.local/bin/power-menu.sh; chmod +x ~/.local/bin/power-menu.sh
+cp "$RICE/scripts/battery.sh" ~/.local/bin/battery.sh; chmod +x ~/.local/bin/battery.sh
+cp "$RICE/scripts/clip.sh" ~/.local/bin/clip.sh; chmod +x ~/.local/bin/clip.sh
+cp "$RICE/scripts/fix-interlaced.sh" ~/.local/bin/fix-interlaced.sh; chmod +x ~/.local/bin/fix-interlaced.sh
+cp "$RICE/rofi/config.rasi" ~/.config/rofi/config.rasi
+mkdir -p ~/.config/dunst; cp "$RICE/dunst/dunstrc" ~/.config/dunst/dunstrc
+mkdir -p ~/.config/kitty; cp "$RICE/kitty/kitty.conf" ~/.config/kitty/kitty.conf
+mkdir -p ~/.config/gtk-3.0 ~/.config/gtk-4.0 ~/.config/xsettingsd
+cp "$RICE/gtk-3.0/settings.ini" ~/.config/gtk-3.0/settings.ini
+cp "$RICE/gtk-4.0/settings.ini" ~/.config/gtk-4.0/settings.ini
+cp "$RICE/xsettingsd/xsettingsd.conf" ~/.config/xsettingsd/xsettingsd.conf
 cp "$RICE/wallpaper/1182325.jpg" ~/Pictures/Wallpapers/
-[ -f ~/.xinitrc ] || printf 'exec i3\n' > ~/.xinitrc
+mkdir -p ~/.local/share/applications; cp "$RICE/applications/install.desktop" ~/.local/share/applications/install.desktop
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+# betterlockscreen cache (blur from wallpaper)
+betterlockscreen -u ~/Pictures/Wallpapers/1182325.jpg 2>/dev/null || true
+[ -f ~/.bashrc ] && cp ~/.bashrc ~/.bashrc.bak
+[ -f ~/.bash_profile ] && cp ~/.bash_profile ~/.bash_profile.bak
+cp "$RICE/.bashrc" ~/.bashrc
+cp "$RICE/.bash_profile" ~/.bash_profile
+[ -f ~/.xinitrc ] && [ ! -L ~/.xinitrc ] && cp ~/.xinitrc ~/.xinitrc.bak
+cp "$RICE/.xinitrc" ~/.xinitrc
 
-echo "==> enabling network"
+gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark' 2>/dev/null || gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+gsettings set org.mate.interface gtk-theme 'adw-gtk3-dark' 2>/dev/null || gsettings set org.mate.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+
+sudo mkdir -p /etc/X11/xorg.conf.d
+sudo tee /etc/X11/xorg.conf.d/30-touchpad.conf >/dev/null <<'EOF'
+Section "InputClass"
+    Identifier "touchpad"
+    Driver "libinput"
+    MatchIsTouchpad "on"
+    Option "Tapping" "on"
+    Option "TappingButtonMap" "lmr"
+    Option "TappingDrag" "on"
+    Option "DisableWhileTyping" "on"
+EndSection
+EOF
+
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+sudo tee /etc/systemd/system/getty@tty1.service.d/override.conf >/dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin $USER --noclear %I \$TERM
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable getty@tty1.service 2>/dev/null || true
 sudo systemctl enable --now NetworkManager 2>/dev/null || true
-
-echo "done. notes:"
-echo " - dead keybinds (helpers not in repo): Win+d rofi text launcher, Print/Shift+Print scregcp, Win+Esc/Win+E use undefined \$Mod (should be \$mod)"
-echo " - dropbox autostart will fail unless you install it; comment it out in ~/.config/i3/config if unwanted"
-echo "run: startx"
+sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+sudo timedatectl set-timezone Asia/Kolkata 2>/dev/null || sudo ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime 2>/dev/null || true
+echo "done."
