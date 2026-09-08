@@ -92,6 +92,12 @@ sudo mkdir -p /etc/modprobe.d
 sudo cp "$RICE/modprobe.d/rtw88_8723de.conf" /etc/modprobe.d/rtw88_8723de.conf 2>/dev/null || true
 sudo systemctl daemon-reload
 
+# --- Lid switch fix: keep network + external monitor on when lid closed (HDMI docked) ---
+echo "==> fixing lid switch (prevent suspend killing wlo1 with external monitor)"
+sudo mkdir -p /etc/systemd/logind.conf.d
+sudo cp "$RICE/logind/lid.conf" /etc/systemd/logind.conf.d/lid.conf
+sudo systemctl restart systemd-logind 2>/dev/null || true
+
 sudo systemctl enable --now NetworkManager 2>/dev/null || true
 sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
 sudo timedatectl set-timezone Asia/Kolkata 2>/dev/null || sudo ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime 2>/dev/null || true
